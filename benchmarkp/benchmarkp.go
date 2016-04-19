@@ -13,7 +13,7 @@ import (
 )
 
 func Query() {
-        con, err := client.NewHTTPClient(client.HTTPConfig{Addr: "http://localhost:8086"})
+        con, err := client.NewHTTPClient(client.HTTPConfig{Addr: "https://tdb01.cern.ch:8086"})
         if err != nil {
                 log.Fatal(err)
         }
@@ -32,7 +32,7 @@ func Write(sSize int, bSize int) {
         //fmt.Printf("Writing to Influx")
 
         conf := client.HTTPConfig{
-                Addr:      "http://localhost:8086",
+                Addr:      "https://tdb01.cern.ch:8086",
                 Username: os.Getenv("INFLUX_USER"),
                 Password: os.Getenv("INFLUX_PWD"),
         }
@@ -40,14 +40,12 @@ func Write(sSize int, bSize int) {
 
         if err != nil {
                 log.Fatal(err)
-        }
+        }     
 
         bps, err := client.NewBatchPoints(client.BatchPointsConfig{
                 Database:        "benchmark",
-                RetentionPolicy: "default",
-                Precision: "ns",
+                Precision:        "ns",
         })
-
 
         var (
                 shapes     = []string{"circle", "rectangle", "square", "triangle"}
@@ -69,27 +67,31 @@ func Write(sSize int, bSize int) {
                                 "color": strconv.Itoa(rand.Intn(len(colors))),
                                 "shape": strconv.Itoa(rand.Intn(len(shapes))),
                         }
-                fields :=  map[string]interface{}{
+
+                fds :=  map[string]interface{}{
                             "value": rand.Intn(batchSize),
                            }
-                pts,err := client.NewPoint(
-                        "shapes",
-                        tags,
-                        fields,
-                        time.Now(),
-                )
 
-               if err != nil {
-                 log.Fatalln("Error: ", err)
-               }
-               bps.AddPoint(pts)
+                //fds := map[string]interface{}{ "value": 1 }
+
+
+                pt, err := client.NewPoint("shapes", tags, fds, time.Now())
+                //fmt.Printf("%v",pt)
+
+                if err != nil {
+                    fmt.Printf("Errors")
+                    log.Fatal(err)
+                }
+
+               
+                bps.AddPoint(pt)
         }
 
         //log.Printf("Writing %v batch", j)
-        con.Write(bps)
+        err := con.Write(bps)
 
         if err != nil {
-                fmt.Printf("Errors")
+                fmt.Printf("Errors in writing")
                 log.Fatal(err)
         }
 
